@@ -1,1 +1,29 @@
-
+{
+  "libraries": [
+    {
+      "name": "nidus",
+      "description": "Beautiful error handling for HackerScript.",
+      "versions": {
+        "0.0.1": "https://github.com/virus-repo/nidus/releases/download/v0.0.1/nidus.a"
+      }
+    },
+    {
+      "name": "cli",
+      "description": "CLI library for HackerScript.",
+      "versions": {
+        "0.0.1": "https://github.com/virus-repo/cli/releases/download/v0.0.1/cli.a",
+        "0.1.0": "https://github.com/virus-repo/cli/releases/download/v0.1.0/cli.a"
+      }
+    },
+    {
+      "name": "tui",
+      "description": "TUI library for HackerScript.",
+      "versions": {
+        "0.1.0": "https://github.com/virus-repo/tui/releases/download/v0.1.0/tui.a",
+        "0.2": "https://github.com/virus-repo/tui/releases/download/v0.2/tui.a",
+        "0.3.1": "https://github.com/virus-repo/tui/releases/download/v0.3/tui.a"
+      }
+    }
+    }
+  ]
+}
