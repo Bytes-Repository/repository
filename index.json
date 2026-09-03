@@ -36,9 +36,12 @@
     "sqlite": "https://github.com/Bytes-Repository/sqlite"
   },
   {
-    "gtk": ""
+    "gtk": "https://github.com/Bytes-Repository/gtk"
   },
   {
-    "qt-hsharp": ""
+    "qt-hsharp": "https://github.com/Bytes-Repository/qt-sharp"
+  },
+  {
+    "progress-bar": "https://github.com/Bytes-Repository/progress-bar"
   }
 ]
