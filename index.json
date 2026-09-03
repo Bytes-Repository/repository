@@ -31,5 +31,14 @@
   },
   {
     "hacker": "https://github.com/HackerOS-Linux-System/hacker"
+  },
+  {
+    "sqlite": "https://github.com/Bytes-Repository/sqlite"
+  },
+  {
+    "gtk": ""
+  },
+  {
+    "qt-hsharp": ""
   }
 ]
