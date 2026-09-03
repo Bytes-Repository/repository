@@ -15,21 +15,21 @@
     "nidus": "https://github.com/Bytes-Repository/nidus"
   },
   {
-    "hk-parser": ""
+    "hk-parser": "https://github.com/HackerOS-Linux-System/hk-parser"
   },
   {
-    "H2D": ""
+    "H2D": "https://github.com/Bytes-Repository/H2D"
   },
   {
-    "volcan": ""
+    "volcan": "https://github.com/Bytes-Repository/volcan"
   },
   {
-    "satsolve": ""
+    "satsolv": "https://github.com/Bytes-Repository/satsolv"
   },
   {
-    "fasttree": ""
+    "fasttree": "https://github.com/Zenit-Linux/libfasttree"
   },
   {
-    "hacker": ""
+    "hacker": "https://github.com/HackerOS-Linux-System/hacker"
   }
 ]
