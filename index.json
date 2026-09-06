@@ -43,5 +43,8 @@
   },
   {
     "progress-bar": "https://github.com/Bytes-Repository/progress-bar"
+  },
+  {
+    "hprompt": "https://github.com/Bytes-Repository/hprompt"
   }
 ]
