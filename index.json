@@ -46,5 +46,8 @@
   },
   {
     "hprompt": "https://github.com/Bytes-Repository/hprompt"
+  },
+  {
+   "wasm": "https://github.com/Bytes-Repository/wasm"
   }
 ]
