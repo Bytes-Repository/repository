@@ -49,5 +49,8 @@
   },
   {
    "wasm": "https://github.com/Bytes-Repository/wasm"
+  },
+  {
+   "git": "https://github.com/Bytes-Repository/git"
   }
 ]
