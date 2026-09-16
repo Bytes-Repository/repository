@@ -52,5 +52,14 @@
   },
   {
    "git": "https://github.com/Bytes-Repository/git"
+  },
+  {
+   "landlock": "https://github.com/Bytes-Repository/landlock"
+  },
+  {
+   "libseccomp": "https://github.com/Bytes-Repository/libseccomp"
+  },
+  {
+   "scopeguard": "https://github.com/Bytes-Repository/scopeguard"
   }
 ]
