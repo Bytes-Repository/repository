@@ -61,5 +61,8 @@
   },
   {
    "scopeguard": "https://github.com/Bytes-Repository/scopeguard"
+  },
+  {
+   "lsp": "https://github.com/Bytes-Repository/lsp"
   }
 ]
