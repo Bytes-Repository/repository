@@ -1,1 +1,123 @@
+name: Tests
 
+# Ten rejestr (index.json) to lista bibliotek H# w formacie
+# [{"nazwa": "url-repo"}, ...]. Ten workflow NIE kompiluje samego
+# rejestru — wykrywa, które wpisy zostały DODANE w danym pushu/PR,
+# klonuje te repozytoria bibliotek i uruchamia na nich testy
+# (`bytes test`) używając najnowszych binarek `hsharp` (kompilator H#)
+# i `bytes` (menedżer pakietów H#), pobranych bezpośrednio z ich
+# release'ów na GitHubie — bez przypinania wersji na sztywno.
+#
+#   hsharp -> https://github.com/HackerOS-Linux-System/H-Sharp/releases/download/<najnowszy-tag>/hsharp
+#   bytes  -> https://github.com/Bytes-Repository/bytes/releases/download/<najnowszy-tag>/bytes
+
+on:
+  push:
+    branches: [main]
+    paths: ["index.json"]
+  pull_request:
+    branches: [main]
+    paths: ["index.json"]
+  workflow_dispatch:
+    inputs:
+      library:
+        description: "Nazwa pojedynczej biblioteki do przetestowania (klucz z index.json). Puste = wykryj nowo dodane wpisy."
+        required: false
+        default: ""
+
+env:
+  # Katalog instalacyjny dla binarek hsharp/bytes (bez sudo).
+  HK_BIN_DIR: ${{ github.workspace }}/.hk-bin
+
+jobs:
+  # ── 1. Wykryj, które biblioteki są nowe w tym uruchomieniu ────────────
+  detect-new-libs:
+    name: Detect newly added libraries
+    runs-on: ubuntu-24.04
+    outputs:
+      libs: ${{ steps.detect.outputs.libs }}
+      has_new: ${{ steps.detect.outputs.has_new }}
+      count: ${{ steps.detect.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # potrzebne do zdiffowania index.json z commitem bazowym
+
+      - name: Detect new entries in index.json
+        id: detect
+        env:
+          BASE_REV: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          LIB_FILTER: ${{ github.event.inputs.library }}
+        run: |
+          chmod +x .github/scripts/detect-new-libs.sh
+          .github/scripts/detect-new-libs.sh "$BASE_REV" "$LIB_FILTER"
+
+  # ── 2. Przetestuj każdą nowo dodaną bibliotekę ─────────────────────────
+  test-library:
+    name: test (${{ matrix.lib.name }})
+    needs: detect-new-libs
+    if: needs.detect-new-libs.outputs.has_new == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        lib: ${{ fromJson(needs.detect-new-libs.outputs.libs) }}
+    steps:
+      - name: Checkout registry (for helper scripts)
+        uses: actions/checkout@v4
+
+      - name: Install latest hsharp + bytes binaries
+        id: install
+        run: |
+          chmod +x .github/scripts/install-hsharp-bytes.sh
+          .github/scripts/install-hsharp-bytes.sh "$HK_BIN_DIR"
+          echo "$HK_BIN_DIR" >> "$GITHUB_PATH"
+
+      - name: Show resolved versions
+        run: |
+          echo "hsharp: ${{ steps.install.outputs.hsharp-version }}"
+          echo "bytes:  ${{ steps.install.outputs.bytes-version }}"
+
+      - name: Clone ${{ matrix.lib.name }}
+        run: git clone --depth 1 "${{ matrix.lib.url }}" lib-src
+
+      - name: Validate Bytes.hk / bytes.hk manifest exists
+        working-directory: lib-src
+        run: |
+          if [ ! -f "Bytes.hk" ] && [ ! -f "bytes.hk" ]; then
+            echo "::error::${{ matrix.lib.name }} (${{ matrix.lib.url }}) nie zawiera pliku Bytes.hk / bytes.hk"
+            exit 1
+          fi
+          cat Bytes.hk 2>/dev/null || cat bytes.hk
+
+      - name: bytes install (fetch deps, if any)
+        working-directory: lib-src
+        run: bytes install || echo "brak zależności do zainstalowania lub 'install' nie dotyczy tego pakietu"
+
+      - name: bytes build
+        working-directory: lib-src
+        run: bytes build -v
+
+      - name: bytes test
+        working-directory: lib-src
+        run: bytes test
+
+      - name: bytes check (type-check sanity)
+        working-directory: lib-src
+        run: bytes check -v
+        continue-on-error: true # 'check' bywa redundantne z 'build' w części projektów — informacyjnie, nie blokuje
+
+  # ── 3. Podsumowanie — przydatne gdy nie ma nowych bibliotek ────────────
+  summary:
+    name: Summary
+    needs: [detect-new-libs, test-library]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report
+        run: |
+          if [ "${{ needs.detect-new-libs.outputs.has_new }}" != "true" ]; then
+            echo "Brak nowo dodanych bibliotek w index.json w tym uruchomieniu — nic do przetestowania."
+          else
+            echo "Przetestowano ${{ needs.detect-new-libs.outputs.count }} nowo dodaną(-e) bibliotekę(-i)."
+          fi
