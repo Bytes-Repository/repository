@@ -1,6 +1,6 @@
 # Repository
 
-Centralny rejestr bibliotek dla ekosystemu **H#** (`hsharp`) i menedżera
+Centralny rejestr bibliotek dla ekosystemu **H#** i menedżera
 pakietów **bytes**. `index.json` to lista wpisów w formacie
 `{"nazwa": "url-repozytorium"}` — każdy wpis wskazuje na osobne
 repozytorium biblioteki, zawierające manifest `Bytes.hk`/`bytes.hk`.
