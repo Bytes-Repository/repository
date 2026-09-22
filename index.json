@@ -67,5 +67,8 @@
   },
   {
    "tauri": "https://github.com/Bytes-Repository/tauri"
+  },
+  {
+   "cranelift": "https://github.com/Bytes-Repository/cranelift"
   }
 ]
