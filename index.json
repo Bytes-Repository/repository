@@ -64,5 +64,8 @@
   },
   {
    "lsp": "https://github.com/Bytes-Repository/lsp"
+  },
+  {
+   "tauri": "https://github.com/Bytes-Repository/tauri"
   }
 ]
