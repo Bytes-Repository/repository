@@ -1,1 +1,131 @@
+name: Build packages
 
+# Analogicznie do tests.yml: wykrywa nowo dodane wpisy w index.json,
+# klonuje odpowiednie repozytoria bibliotek H# i buduje je w trybie
+# --release na kilku wersjach Ubuntu, używając najnowszych binarek
+# `hsharp` (kompilator) i `bytes` (menedżer pakietów/builder), pobranych
+# dynamicznie z ich najnowszych release'ów na GitHubie. Zbudowane
+# artefakty (build/) są publikowane jako artefakty workflow.
+#
+#   hsharp -> https://github.com/HackerOS-Linux-System/H-Sharp/releases/download/<najnowszy-tag>/hsharp
+#   bytes  -> https://github.com/Bytes-Repository/bytes/releases/download/<najnowszy-tag>/bytes
+
+on:
+  push:
+    branches: [main]
+    paths: ["index.json"]
+  pull_request:
+    branches: [main]
+    paths: ["index.json"]
+  workflow_dispatch:
+    inputs:
+      library:
+        description: "Nazwa pojedynczej biblioteki do zbudowania (klucz z index.json). Puste = wykryj nowo dodane wpisy."
+        required: false
+        default: ""
+
+env:
+  HK_BIN_DIR: ${{ github.workspace }}/.hk-bin
+
+jobs:
+  # ── 1. Wykryj, które biblioteki są nowe w tym uruchomieniu ────────────
+  detect-new-libs:
+    name: Detect newly added libraries
+    runs-on: ubuntu-24.04
+    outputs:
+      libs: ${{ steps.detect.outputs.libs }}
+      has_new: ${{ steps.detect.outputs.has_new }}
+      count: ${{ steps.detect.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect new entries in index.json
+        id: detect
+        env:
+          BASE_REV: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          LIB_FILTER: ${{ github.event.inputs.library }}
+        run: |
+          chmod +x .github/scripts/detect-new-libs.sh
+          .github/scripts/detect-new-libs.sh "$BASE_REV" "$LIB_FILTER"
+
+  # ── 2. Zbuduj pakiet (--release) dla każdej nowo dodanej biblioteki ───
+  build-library:
+    name: build (${{ matrix.lib.name }}, ${{ matrix.os }})
+    needs: detect-new-libs
+    if: needs.detect-new-libs.outputs.has_new == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-22.04]
+        lib: ${{ fromJson(needs.detect-new-libs.outputs.libs) }}
+    steps:
+      - name: Checkout registry (for helper scripts)
+        uses: actions/checkout@v4
+
+      - name: Install latest hsharp + bytes binaries
+        id: install
+        run: |
+          chmod +x .github/scripts/install-hsharp-bytes.sh
+          .github/scripts/install-hsharp-bytes.sh "$HK_BIN_DIR"
+          echo "$HK_BIN_DIR" >> "$GITHUB_PATH"
+
+      - name: Show resolved versions
+        run: |
+          echo "hsharp: ${{ steps.install.outputs.hsharp-version }}"
+          echo "bytes:  ${{ steps.install.outputs.bytes-version }}"
+
+      - name: Clone ${{ matrix.lib.name }}
+        run: git clone --depth 1 "${{ matrix.lib.url }}" lib-src
+
+      - name: Validate Bytes.hk / bytes.hk manifest exists
+        working-directory: lib-src
+        run: |
+          if [ ! -f "Bytes.hk" ] && [ ! -f "bytes.hk" ]; then
+            echo "::error::${{ matrix.lib.name }} (${{ matrix.lib.url }}) nie zawiera pliku Bytes.hk / bytes.hk"
+            exit 1
+          fi
+
+      - name: bytes install (fetch deps, if any)
+        working-directory: lib-src
+        run: bytes install || echo "brak zależności do zainstalowania lub 'install' nie dotyczy tego pakietu"
+
+      - name: bytes build --release
+        working-directory: lib-src
+        run: bytes build --release -v
+
+      - name: Locate build output
+        id: out
+        working-directory: lib-src
+        run: |
+          if [ ! -d build ]; then
+            echo "::error::Katalog build/ nie został utworzony przez 'bytes build --release'"
+            exit 1
+          fi
+          echo "Zawartość build/:"
+          find build -maxdepth 2 -type f -print
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.lib.name }}-${{ matrix.os }}
+          path: lib-src/build/
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ── 3. Podsumowanie ─────────────────────────────────────────────────────
+  summary:
+    name: Summary
+    needs: [detect-new-libs, build-library]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report
+        run: |
+          if [ "${{ needs.detect-new-libs.outputs.has_new }}" != "true" ]; then
+            echo "Brak nowo dodanych bibliotek w index.json w tym uruchomieniu — nic do zbudowania."
+          else
+            echo "Zbudowano pakiety dla ${{ needs.detect-new-libs.outputs.count }} nowo dodanej(-ych) biblioteki(-ek)."
+          fi
