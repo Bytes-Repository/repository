@@ -70,5 +70,8 @@
   },
   {
    "cranelift": "https://github.com/Bytes-Repository/cranelift"
+  },
+  {
+   "libhammer": "https://github.com/HackerOS-Linux-System/hammer/tree/main/libhammer"
   }
 ]
